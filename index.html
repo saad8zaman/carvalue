@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CarValue — Trader Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="car-data.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: #0a0a0a;
+      min-height: 100vh;
+      color: #f0ede8;
+      padding: 2rem 1.5rem 3rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .header { display: flex; align-items: center; gap: 12px; margin-bottom: 2.5rem; }
+    .logo-mark { width: 36px; height: 36px; background: #e8ff47; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+    .app-title { font-size: 18px; font-weight: 800; color: #f0ede8; letter-spacing: -0.5px; }
+    .app-sub { font-size: 12px; color: #666; font-family: 'DM Mono', monospace; margin-top: 1px; }
+    .badge { display: inline-block; font-size: 10px; font-family: 'DM Mono', monospace; background: rgba(232,255,71,0.1); color: #e8ff47; border-radius: 4px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
+
+    .form-card { background: #141414; border: 0.5px solid #2a2a2a; border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; }
+    .section-label { font-size: 11px; font-family: 'DM Mono', monospace; color: #e8ff47; letter-spacing: 0.08em; margin-bottom: 1rem; text-transform: uppercase; }
+
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field-grid.full { grid-template-columns: 1fr; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 11px; color: #888; font-family: 'DM Mono', monospace; }
+
+    .field input, .field select {
+      background: #1e1e1e;
+      border: 0.5px solid #333;
+      border-radius: 8px;
+      color: #f0ede8;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .field input:focus, .field select:focus { border-color: #e8ff47; }
+    .field input::placeholder { color: #444; }
+    .field select option { background: #1e1e1e; color: #f0ede8; }
+    .field select:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 12px; top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid #555;
+      pointer-events: none;
+    }
+
+    .condition-row { display: flex; gap: 8px; }
+    .cond-btn { flex: 1; padding: 9px 8px; border-radius: 8px; border: 0.5px solid #333; background: #1e1e1e; color: #888; font-family: 'Syne', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .cond-btn.active { border-color: #e8ff47; background: rgba(232,255,71,0.08); color: #e8ff47; }
+
+    .value-btn { width: 100%; padding: 14px; background: #e8ff47; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: #0a0a0a; cursor: pointer; transition: opacity 0.15s, transform 0.1s; letter-spacing: -0.3px; margin-top: 0.5rem; }
+    .value-btn:hover { opacity: 0.9; }
+    .value-btn:active { transform: scale(0.99); }
+
+    .loading-state { text-align: center; padding: 3rem 1rem; display: none; }
+    .spinner { width: 32px; height: 32px; border: 2px solid #2a2a2a; border-top-color: #e8ff47; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: 'DM Mono', monospace; font-size: 12px; color: #666; }
+
+    .result-card { background: #141414; border: 0.5px solid #2a2a2a; border-radius: 16px; padding: 1.5rem; margin-top: 1rem; display: none; }
+    .result-card.visible { display: block; }
+
+    .valuation-hero { text-align: center; padding: 1rem 0 1.5rem; border-bottom: 0.5px solid #2a2a2a; margin-bottom: 1.25rem; }
+    .val-label { font-size: 11px; font-family: 'DM Mono', monospace; color: #666; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+    .val-price { font-size: 42px; font-weight: 800; color: #e8ff47; letter-spacing: -2px; line-height: 1; }
+    .val-range { font-size: 12px; font-family: 'DM Mono', monospace; color: #666; margin-top: 8px; }
+    .confidence-bar { background: #1e1e1e; border-radius: 4px; height: 4px; margin-top: 12px; overflow: hidden; }
+    .confidence-fill { height: 100%; background: #e8ff47; border-radius: 4px; transition: width 1s ease; }
+    .conf-label { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; font-family: 'DM Mono', monospace; color: #555; }
+
+    .breakdown-title { font-size: 11px; font-family: 'DM Mono', monospace; color: #555; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+    .market-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid #1e1e1e; }
+    .market-name { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #ccc; }
+    .market-dot { width: 6px; height: 6px; border-radius: 50%; background: #e8ff47; flex-shrink: 0; }
+    .market-dot.mid { background: #4af0c8; }
+    .market-dot.low { background: #ff8c5a; }
+    .market-price { font-family: 'DM Mono', monospace; font-size: 13px; color: #f0ede8; font-weight: 500; }
+    .market-listings { font-size: 10px; color: #555; font-family: 'DM Mono', monospace; }
+
+    .insight-box { background: rgba(232,255,71,0.05); border: 0.5px solid rgba(232,255,71,0.15); border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #b0ad9e; line-height: 1.6; margin-top: 1.25rem; }
+
+    .reset-btn { width: 100%; padding: 11px; background: transparent; border: 0.5px solid #2a2a2a; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 13px; color: #555; cursor: pointer; margin-top: 10px; transition: color 0.15s, border-color 0.15s; }
+    .reset-btn:hover { color: #888; border-color: #444; }
+
+    .error-box { background: rgba(255,80,80,0.07); border: 0.5px solid rgba(255,80,80,0.2); border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #ff8080; margin-top: 1rem; display: none; }
+
+    @media (max-width: 440px) {
+      body { padding: 1.25rem 1rem 2rem; }
+      .val-price { font-size: 34px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo-mark">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M2 13h16M4 13l1.5-4h9L16 13M6 16.5a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="app-title">CarValue <span class="badge">GLOBAL</span></div>
+      <div class="app-sub">TRADER EDITION</div>
+    </div>
+  </div>
+
+  <div id="form-section">
+    <div class="form-card">
+      <div class="section-label">Vehicle details</div>
+
+      <div class="field-grid" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Make</label>
+          <div class="select-wrap">
+            <select id="make" onchange="onMakeChange()">
+              <option value="">Select make...</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Year</label>
+          <div class="select-wrap">
+            <select id="year">
+              <option value="">Select year...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-grid full" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Model</label>
+          <div class="select-wrap">
+            <select id="model" onchange="onModelChange()" disabled>
+              <option value="">Select make first...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-grid full" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Variant / Trim</label>
+          <div class="select-wrap">
+            <select id="variant" disabled>
+              <option value="">Select model first...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-grid" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Fuel type</label>
+          <div class="select-wrap">
+            <select id="fuel">
+              <option value="">Select...</option>
+              <option>Petrol</option>
+              <option>Diesel</option>
+              <option>Hybrid</option>
+              <option>Plug-in Hybrid</option>
+              <option>Electric</option>
+              <option>Hydrogen</option>
+              <option>LPG</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Gearbox</label>
+          <div class="select-wrap">
+            <select id="gearbox">
+              <option value="">Select...</option>
+              <option>Manual</option>
+              <option>Automatic</option>
+              <option>Semi-Automatic</option>
+              <option>CVT</option>
+              <option>Dual-Clutch (DCT)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label>Mileage</label>
+          <input type="number" id="mileage" placeholder="e.g. 45000" min="0" />
+        </div>
+        <div class="field">
+          <label>Colour (optional)</label>
+          <input type="text" id="colour" placeholder="e.g. Midnight Black" />
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="section-label">Condition</div>
+      <div class="condition-row">
+        <div class="cond-btn" data-val="Excellent">Excellent</div>
+        <div class="cond-btn active" data-val="Good">Good</div>
+        <div class="cond-btn" data-val="Average">Average</div>
+        <div class="cond-btn" data-val="Poor">Poor</div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="section-label">Optional extras</div>
+      <div class="field full">
+        <label>Features / history notes</label>
+        <input type="text" id="extras" placeholder="e.g. Full service history, sunroof, new tyres, HPI clear" />
+      </div>
+    </div>
+
+    <button class="value-btn" onclick="runValuation()">Get market valuation →</button>
+    <div class="error-box" id="error-box"></div>
+  </div>
+
+  <div class="loading-state" id="loading-state">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Scanning used car markets...</div>
+  </div>
+
+  <div class="result-card" id="result-card">
+    <div id="result-inner"></div>
+    <button class="reset-btn" onclick="resetForm()">← Value another vehicle</button>
+  </div>
+
+  <script>
+    const API_URL = '/api/valuation';
+    let condition = 'Good';
+
+    // Populate makes A–Z
+    const makeEl = document.getElementById('make');
+    Object.keys(CAR_DATA).sort().forEach(make => {
+      const o = document.createElement('option');
+      o.value = o.textContent = make;
+      makeEl.appendChild(o);
+    });
+
+    // Populate years newest first
+    const yearEl = document.getElementById('year');
+    for (let y = new Date().getFullYear(); y >= 1980; y--) {
+      const o = document.createElement('option');
+      o.value = o.textContent = y;
+      yearEl.appendChild(o);
+    }
+
+    function onMakeChange() {
+      const make = makeEl.value;
+      const modelEl = document.getElementById('model');
+      const variantEl = document.getElementById('variant');
+
+      modelEl.innerHTML = '<option value="">Select model...</option>';
+      variantEl.innerHTML = '<option value="">Select model first...</option>';
+      variantEl.disabled = true;
+
+      if (!make) { modelEl.disabled = true; return; }
+
+      Object.keys(CAR_DATA[make]).sort().forEach(model => {
+        const o = document.createElement('option');
+        o.value = o.textContent = model;
+        modelEl.appendChild(o);
+      });
+      modelEl.disabled = false;
+    }
+
+    function onModelChange() {
+      const make = makeEl.value;
+      const model = document.getElementById('model').value;
+      const variantEl = document.getElementById('variant');
+
+      variantEl.innerHTML = '<option value="">Select variant...</option>';
+      if (!make || !model) { variantEl.disabled = true; return; }
+
+      (CAR_DATA[make][model] || []).forEach(v => {
+        const o = document.createElement('option');
+        o.value = o.textContent = v;
+        variantEl.appendChild(o);
+      });
+
+      // Always add an escape hatch
+      const other = document.createElement('option');
+      other.value = 'Other'; other.textContent = 'Other / Not listed';
+      variantEl.appendChild(other);
+      variantEl.disabled = false;
+    }
+
+    document.querySelectorAll('.cond-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.cond-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        condition = btn.dataset.val;
+      });
+    });
+
+    const loadingMessages = [
+      'Scanning used car markets...',
+      'Comparing listings across platforms...',
+      'Analysing mileage and condition...',
+      'Calculating fair market value...',
+    ];
+
+    async function runValuation() {
+      const make    = document.getElementById('make').value;
+      const model   = document.getElementById('model').value;
+      const year    = document.getElementById('year').value;
+      const variant = document.getElementById('variant').value;
+      const fuel    = document.getElementById('fuel').value;
+      const mileage = document.getElementById('mileage').value.trim();
+      const gearbox = document.getElementById('gearbox').value;
+      const colour  = document.getElementById('colour').value.trim();
+      const extras  = document.getElementById('extras').value.trim();
+      const errBox  = document.getElementById('error-box');
+
+      errBox.style.display = 'none';
+
+      if (!make || !model || !year || !mileage) {
+        errBox.textContent = 'Please select a make, model, year and enter the mileage.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      document.getElementById('form-section').style.display = 'none';
+      document.getElementById('loading-state').style.display = 'block';
+
+      let msgIdx = 0;
+      const msgInt = setInterval(() => {
+        document.getElementById('loading-text').textContent = loadingMessages[++msgIdx % loadingMessages.length];
+      }, 2200);
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ make, model, year, variant, fuel, mileage, gearbox, condition, colour, extras }),
+        });
+
+        clearInterval(msgInt);
+        document.getElementById('loading-state').style.display = 'none';
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Valuation failed');
+        }
+
+        renderResult(await res.json(), { make, model, year, variant, mileage });
+
+      } catch (err) {
+        clearInterval(msgInt);
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('form-section').style.display = 'block';
+        errBox.textContent = err.message || 'Something went wrong — please try again.';
+        errBox.style.display = 'block';
+      }
+    }
+
+    function renderResult(val, d) {
+      const dot = t => `market-dot${t === 'mid' ? ' mid' : t === 'low' ? ' low' : ''}`;
+
+      const isLive = val.data_source === 'live_scraped';
+      const totalPrices = val.scrape_meta ? val.scrape_meta.reduce((n, s) => n + (s.prices_found || 0), 0) : 0;
+
+      const dataSourceBadge = isLive && totalPrices > 0
+        ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-family:'DM Mono',monospace;background:rgba(74,240,200,0.1);color:#4af0c8;border:0.5px solid rgba(74,240,200,0.25);border-radius:4px;padding:3px 7px;margin-left:8px;">
+            <span style="width:5px;height:5px;border-radius:50%;background:#4af0c8;display:inline-block;"></span>
+            LIVE · ${totalPrices} prices
+          </span>`
+        : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-family:'DM Mono',monospace;background:rgba(255,140,90,0.1);color:#ff8c5a;border:0.5px solid rgba(255,140,90,0.25);border-radius:4px;padding:3px 7px;margin-left:8px;">
+            <span style="width:5px;height:5px;border-radius:50%;background:#ff8c5a;display:inline-block;"></span>
+            AI ESTIMATE
+          </span>`;
+
+      const markets = val.markets.map(m => {
+        const meta = val.scrape_meta ? val.scrape_meta.find(s => s.name === m.name) : null;
+        const liveTag = meta && meta.prices_found > 0
+          ? `<span style="font-size:9px;color:#4af0c8;font-family:'DM Mono',monospace;margin-left:4px;">LIVE</span>`
+          : '';
+        return `
+        <div class="market-row">
+          <div class="market-name"><span class="${dot(m.tier)}"></span>${m.name}${liveTag}<span class="market-listings">${m.listings} listings</span></div>
+          <div class="market-price">£${m.avg_price.toLocaleString()}</div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('result-inner').innerHTML = `
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:1rem;">
+          <div class="section-label" style="margin-bottom:0;">${d.year} ${d.make} ${d.model}${d.variant && d.variant !== 'Other' ? ' ' + d.variant : ''} · ${parseInt(d.mileage).toLocaleString()} mi</div>
+          ${dataSourceBadge}
+        </div>
+        <div class="valuation-hero">
+          <div class="val-label">Base market value</div>
+          <div class="val-price">£${val.base_value.toLocaleString()}</div>
+          <div class="val-range">Range: £${val.range_low.toLocaleString()} – £${val.range_high.toLocaleString()}</div>
+          <div class="confidence-bar"><div class="confidence-fill" id="conf-fill" style="width:0%"></div></div>
+          <div class="conf-label"><span>Market confidence</span><span>${val.confidence}%</span></div>
+        </div>
+        <div style="margin-bottom:1.25rem;"><div class="breakdown-title">Platform breakdown</div>${markets}</div>
+        <div class="insight-box">
+          <div style="font-size:10px;font-family:'DM Mono',monospace;color:#666;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;">Trader insight</div>
+          ${val.insight}
+        </div>`;
+
+      document.getElementById('result-card').classList.add('visible');
+      setTimeout(() => { const f = document.getElementById('conf-fill'); if (f) f.style.width = val.confidence + '%'; }, 100);
+    }
+
+    function resetForm() {
+      document.getElementById('result-card').classList.remove('visible');
+      document.getElementById('result-inner').innerHTML = '';
+      document.getElementById('form-section').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
